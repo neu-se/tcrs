@@ -22,7 +22,7 @@ shinyServer(function(input, output) {
         fetch_survey(
             surveyID = Sys.getenv(c("SURVEY_ID")), # Get from logging into qualtrics and clicking on "Qualtrics IDs" at the top
             verbose = TRUE,
-            force_request = FALSE
+            force_request = ifelse(input$forceReload > 0, TRUE, FALSE)
         )
     })
     colMap <- reactive({

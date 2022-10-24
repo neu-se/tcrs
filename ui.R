@@ -22,6 +22,7 @@ shinyUI(fluidPage(
           uiOutput("filterByDate"),
             uiOutput("filterBySection"),
             uiOutput("filterByTeam"),
+            actionButton("forceReload", "Force refresh of data from Qualtrics")
         ),
 
         # Show a plot of the generated distribution
