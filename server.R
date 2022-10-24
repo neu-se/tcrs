@@ -93,6 +93,9 @@ shinyServer(function(input, output) {
         select(summary) %>% summarise(summary=paste0(summary,collapse="\n"))
       HTML(thisWeekI$summary)
     })
+    output$reflection <- renderTable({
+        groupResults() %>% select(fullname,Q15)
+    })
     output$completionInfo <- renderTable({
       groupResults() %>% mutate(minutes=`Duration (in seconds)`/60, EndDate=format(EndDate)) %>% select(fullname, EndDate, minutes) 
     })

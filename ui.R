@@ -29,6 +29,9 @@ shinyUI(fluidPage(
           plotOutput("sentiment"),
             plotOutput("howDidYouDo"),
             htmlOutput("thisWeekIHave"),
+            h4("General Reflection"),
+            tableOutput("reflection"),
+            h4("Survey Completion"),
           tableOutput("completionInfo")
         )
     )
