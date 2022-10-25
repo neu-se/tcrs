@@ -59,7 +59,6 @@ shinyServer(function(input, output) {
     # resp
     respG <- resp %>%
       filter(!is.na(value)) %>%
-      mutate(value=fct_rev(value)) %>%
       group_by(name, value) %>%
       summarise(count = n()) %>%
       inner_join(colMap(), by = c("name" = "qname")) %>%
