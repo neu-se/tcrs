@@ -59,12 +59,13 @@ shinyServer(function(input, output) {
     # resp
     respG <- resp %>%
       filter(!is.na(value)) %>%
+      mutate(value=fct_rev(value)) %>%
       group_by(name, value) %>%
       summarise(count = n()) %>%
       inner_join(colMap(), by = c("name" = "qname")) %>%
     select(main, value, count) %>%
     mutate(main = str_wrap(main, 15)) %>%
-    pivot_wider(names_from=value,values_from=count, values_fill = 0)
+    pivot_wider(names_from=value,values_from=count, values_fill = 0, names_expand = TRUE)
 
   HH::likert(main~., respG, ReferenceZero=3, main="", ylab="") 
   })
@@ -85,7 +86,7 @@ shinyServer(function(input, output) {
       inner_join(colMap(), by = c("name" = "qname")) %>%
       select(main, value, count) %>%
       mutate(main = str_wrap(main, 25)) %>%
-      pivot_wider(names_from = value, values_from = count, values_fill = 0)
+      pivot_wider(names_from = value, values_from = count, values_fill = 0, names_expand = TRUE)
 
     HH::likert(main ~ ., sentimentG, ReferenceZero = 3, main = "", ylab = "")
   })
