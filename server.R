@@ -12,6 +12,7 @@ library(tidyverse)
 library(qualtRics)
 library(ggplot2)
 library(lubridate)
+library(ggthemes)
 
 
 qualtrics_api_credentials(Sys.getenv(c("QUALTRICS_API_KEY")), Sys.getenv(c("QUALTRICS_BASE_URL")))
@@ -19,11 +20,12 @@ qualtrics_api_credentials(Sys.getenv(c("QUALTRICS_API_KEY")), Sys.getenv(c("QUAL
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
   tcrs <- reactive({
+    cat(input$forceReload)
     fetch_survey(
       surveyID = Sys.getenv(c("SURVEY_ID")), # Get from logging into qualtrics and clicking on "Qualtrics IDs" at the top
       verbose = TRUE,
       force_request = ifelse(input$forceReload > 0, TRUE, FALSE)
-    )
+    ) %>% filter(!is.na(EndDate))
   })
   colMap <- reactive({
     extract_colmap(tcrs())
@@ -43,7 +45,14 @@ shinyServer(function(input, output) {
   groupResults <- reactive({
     roster() %>%
       left_join(tcrs(), by = c("email" = "RecipientEmail")) %>%
-      filter(("-" %in% input$filterByGroup & (section %in% input$filterBySection | "-" %in% input$filterBySection)) | group %in% input$filterByGroup)
+      filter(
+        (("-" %in% input$filterByGroup & (section %in% input$filterBySection | "-" %in% input$filterBySection)) 
+        | group %in% input$filterByGroup))
+  })
+
+  weekResults <- reactive({
+      groupResults() %>%
+      filter(Q27 %in% input$filterByDate)
   })
 
   observeEvent(input$section, {
@@ -53,7 +62,7 @@ shinyServer(function(input, output) {
   output$howDidYouDo <- renderPlot({
     # just the "how did you do" questions
     qs <- c("Q4", "Q5", "Q7")
-    resp <- groupResults() %>%
+    resp <- weekResults() %>%
       select(fullname, any_of(qs)) %>%
       pivot_longer(-fullname)
     # resp
@@ -73,7 +82,7 @@ shinyServer(function(input, output) {
   output$sentiment <- renderPlot({
     sentimentQs <- c("Q3", "Q6", "Q16", "Q21", "Q23", "Q24")
 
-    sentiment <- groupResults() %>%
+    sentiment <- weekResults() %>%
       select(fullname, any_of(sentimentQs)) %>%
       pivot_longer(-fullname) %>%
       filter(!is.na(value))
@@ -90,13 +99,53 @@ shinyServer(function(input, output) {
 
     HH::likert(main ~ ., sentimentG, ReferenceZero = 3, main = "", ylab = "")
   })
+  output$sentimentOverTime <- renderPlot({
+    sentimentQs <- c('Q3', 'Q6', 'Q16', 'Q21', 'Q23', 'Q24','Q27')
+    sentiment <- groupResults()  %>% 
+    select(fullname, any_of(sentimentQs)) %>%
+    pivot_longer(-any_of(c('fullname','Q27'))) %>% filter(!is.na(value)) %>%
+        mutate(value=fct_rev(value)) 
+       
+    sentimentG <- sentiment %>%
+      group_by(name,value,Q27) %>%
+      summarise(count=n()) %>%
+      ungroup() %>%
+      rename(Week=Q27) %>%
+      inner_join(colMap(), by=c("name"="qname")) %>%
+      select(main, value, count, Week) %>%
+      mutate(main=str_wrap(main,70), value=as.numeric(value)) %>%
+      group_by(main, Week) %>%
+      summarise(avg=sum(value*count)/sum(count), min=min(value),max=max(value))
+    
+
+    ggplot(sentimentG, aes(x=Week,group=1)) +
+        geom_ribbon(aes(ymin=min,ymax=max), fill="grey70") +
+        geom_line(aes(y=avg)) +
+        scale_y_discrete(name="Response",
+            labels=levels(sentiment$value),
+            limits=levels(sentiment$value)
+            ) +
+         theme_minimal() +
+            facet_wrap(main ~ ., ncol=2,scales="free_y")+
+            theme(
+            axis.title.y = element_blank(),    
+            axis.title.x = element_blank(), 
+                    axis.text.y=element_text(color="black"),
+
+            axis.text.x = element_text(angle = 45, hjust = 1),
+            panel.border=element_rect(fill=NA,color='black', size=0.5),
+            panel.grid.major.y=element_line(color="grey80", size=0.25),
+            )
+
+  })
+
   output$thisWeekIHave <- renderUI({
     # The "This week I have questions"
     q <- c("QID1", "QID2", "QID9", "QID10", "QID9_7_TEXT", "Q1_7_TEXT", "Q2_6_TEXT", "Q10_5_TEXT")
     qs <- colMap() %>%
       filter(ImportId %in% q) %>%
       select(qname)
-    thisWeekI <- groupResults() %>%
+    thisWeekI <- weekResults() %>%
       select(fullname, any_of(qs$qname)) %>%
       pivot_longer(-fullname) %>%
       inner_join(colMap(), by = c("name" = "qname")) %>%
@@ -114,10 +163,10 @@ shinyServer(function(input, output) {
     HTML(thisWeekI$summary)
   })
   output$reflection <- renderTable({
-    groupResults() %>% select(fullname, Q15)
+    weekResults() %>% select(fullname, Q15)
   })
   output$completionInfo <- renderTable({
-    groupResults() %>%
+    weekResults() %>%
       mutate(minutes = `Duration (in seconds)` / 60, EndDate = format(EndDate)) %>%
       select(fullname, EndDate, minutes)
   })
@@ -128,7 +177,7 @@ shinyServer(function(input, output) {
   })
   output$filterByDate <- renderUI({
     selectInput("filterByDate", "Reflection Period:",
-      choices = groupResults() %>% distinct(Q27) %>% select(Q27)
+      choices = tcrs() %>% distinct(Q27) %>% select(Q27)
     )
   })
   output$filterByTeam <- renderUI({

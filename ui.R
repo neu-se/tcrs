@@ -27,7 +27,8 @@ shinyUI(fluidPage(
 
         # Show a plot of the generated distribution
         mainPanel(
-          plotOutput("sentiment"),
+            plotOutput("sentimentOverTime"),
+            plotOutput("sentiment"),
             plotOutput("howDidYouDo"),
             htmlOutput("thisWeekIHave"),
             h4("General Reflection"),
