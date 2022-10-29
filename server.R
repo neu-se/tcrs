@@ -113,7 +113,7 @@ shinyServer(function(input, output) {
       rename(Week=Q27) %>%
       inner_join(colMap(), by=c("name"="qname")) %>%
       select(main, value, count, Week) %>%
-      mutate(main=str_wrap(main,70), value=as.numeric(value)) %>%
+      mutate(main=str_wrap(main,60), value=as.numeric(value)) %>%
       group_by(main, Week) %>%
       summarise(avg=sum(value*count)/sum(count), min=min(value),max=max(value))
     
