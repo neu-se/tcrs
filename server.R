@@ -13,8 +13,10 @@ library(qualtRics)
 library(ggplot2)
 library(lubridate)
 library(ggthemes)
+library(googlesheets4)
 
 
+gs4_deauth()
 qualtrics_api_credentials(Sys.getenv(c("QUALTRICS_API_KEY")), Sys.getenv(c("QUALTRICS_BASE_URL")))
 
 # Define server logic required to draw a histogram
@@ -35,7 +37,8 @@ shinyServer(function(input, output) {
     survey_questions(Sys.getenv(c("SURVEY_ID")))
   })
   roster <- reactive({
-    fetch_mailinglist(Sys.getenv(c("MAILING_LIST_ID"))) # also from "qualtics IDs" page
+    read_sheet(Sys.getenv(c("MAILING_LIST_SHEET")), col_types="c")
+    # fetch_mailinglist(Sys.getenv(c("MAILING_LIST_ID"))) # also from "qualtics IDs" page
   })
 
   section <- reactive({
