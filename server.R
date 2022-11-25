@@ -106,6 +106,7 @@ shinyServer(function(input, output) {
     sentimentQs <- c('Q3', 'Q6', 'Q16', 'Q21', 'Q23', 'Q24','Q27')
     sentiment <- groupResults()  %>% 
     select(fullname, any_of(sentimentQs)) %>%
+    mutate(Q16 = replace_na('Neither agree nor disagree'))  %>% 
     pivot_longer(-any_of(c('fullname','Q27'))) %>% filter(!is.na(value)) %>%
         mutate(value=fct_rev(value)) 
        
